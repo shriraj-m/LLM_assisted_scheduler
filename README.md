@@ -1,3 +1,5 @@
+# LLM-Assisted Process Scheduler
+
 ## Overview
 
 This project is a difficult extra credit assignment for our Operating Systems class at Florida Polytechnic University. Completion of this project and report counts as the final exam grade! We are tasked to implement an intelligent process scheduler, using a Large Language Model (LLM) to assist in making scheduling decisions. Instead of relying on traditional hard-coded scheduling algorithms, the system lets an AI agent analyze the current operating system state and determine which process should be moved forward.
@@ -8,8 +10,6 @@ This project is a difficult extra credit assignment for our Operating Systems cl
 
 The goal of this project is to explore how Large Language Models can be used to make operating system scheduling decisions and if they make an impact in comparison to traditional methods. Traditional schedulers use fixed algorithms like Round Robin or Shortest Job First. Our approach allows the LLM to dynamically which algorithm fits the best based on the current system state.
 
-
-# LLM-Assisted Process Scheduler
 
 ## Table of Contents
 - [Phase 1: MCP Server & Agent Integration](#phase-1-mcp-server-and-llm-agent)
