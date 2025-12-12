@@ -2,3 +2,7 @@ fastmcp
 pydantic
 jsonschema
 logging
+langgraph
+langchain
+langchain-groq
+dotenv

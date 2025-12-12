@@ -3,10 +3,16 @@ import json
 import threading
 import logging
 import pathlib
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from typing import Optional, Callable
 
+from schemas.schemas import OS_State, Process
+import shared_state
+
 # Logging configuration
-LOG_FILE = "mcp_server/logs/os_connection.log"
+LOG_FILE = "mcp_server\logs\os_connection.log"
 logging.basicConfig(
     level=logging.INFO,  
     format="%(asctime)s [%(levelname)s] %(message)s",  
@@ -22,8 +28,6 @@ logger = logging.getLogger("os_connection")
 OS_HOST = "127.0.0.1"  # localhost
 OS_LISTEN_PORT = 5050  # port for OS communication
 OS_DECISION_PORT = 5051  # port for OS communication
-
-LATEST_OS_STATE: Optional[dict] = None
 
 def start_listener(on_update: Optional[Callable[[dict], None]] = None):
     """
@@ -71,6 +75,8 @@ def start_listener(on_update: Optional[Callable[[dict], None]] = None):
                         on_update(data)
                 except Exception as ex:
                     logger.error(f"[OS_CONNECTION] Error processing telemetry: {ex}")
+                    import traceback
+                    logger.error(f"[OS_CONNECTION] Traceback: {traceback.format_exc()}")
     
     # start the listener in a daemon thread (will exit when main program exits)
     thread = threading.Thread(target=listen_loop, daemon=True)
@@ -79,13 +85,40 @@ def start_listener(on_update: Optional[Callable[[dict], None]] = None):
 
 def set_latest_os_state(state: dict):
     """
-    Set the latest OS state
+    Set the latest OS state by converting it to OS_State model and storing in shared_state
     Args:
-        state: A dict containing the latest OS state
+        state: A dict containing the latest OS state from the OS simulation
     """
-    global LATEST_OS_STATE
-    LATEST_OS_STATE = state
-    logger.info(f"[OS_CONNECTION] Set latest OS state: {state}")
+    try:
+        # Convert the incoming state dict to OS_State model
+        # Map "ready_queue" to "ready_processes" and convert process states
+        ready_processes = []
+        for proc in state.get("ready_queue", []):
+            # Map "ready" state to "running" since Process schema doesn't have "ready"
+            # These are processes ready to be scheduled/run
+            process_state = proc.get("state", "unknown")
+            if process_state == "ready":
+                process_state = "running"  # Ready processes are ready to run
+            
+            ready_processes.append(Process(
+                pid=proc.get("pid"),
+                state=process_state,
+                cpu_burst_ms=proc.get("cpu_burst_ms", 0)
+            ))
+        
+        # Create OS_State object
+        os_state = OS_State(
+            ready_processes=ready_processes,
+            cpu_usage=state.get("cpu_usage", 0.0)
+        )
+        
+        # Update shared state
+        shared_state.LATEST_OS_STATE = os_state
+        logger.info(f"[OS_CONNECTION] Set latest OS state: {os_state.model_dump()}")
+    except Exception as ex:
+        logger.error(f"[OS_CONNECTION] Error converting OS state: {ex}")
+        import traceback
+        logger.error(f"[OS_CONNECTION] Traceback: {traceback.format_exc()}")
 
 
 def move_to_os(decision: dict) -> bool:
@@ -96,15 +129,23 @@ def move_to_os(decision: dict) -> bool:
     Returns:
         bool: True if the schedule decision was sent successfully, False otherwise
     """
+    next_pid = decision.get("next_pid", "unknown")
+    reason = decision.get("reason", "no reason provided")
+    logger.info(f"Attempting to send schedule decision to OS: PID={next_pid}, Reason='{reason}'")
+    
     try:
         # create a TCP client socket to send data TO the OS
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((OS_HOST, OS_DECISION_PORT))
         payload = {"type": "decision", "payload": decision}
-        client_socket.sendall(json.dumps(payload).encode("utf-8"))
+        payload_json = json.dumps(payload)
+        client_socket.sendall(payload_json.encode("utf-8"))
         # close the connection after sending
         client_socket.close()
+        logger.info(f"Successfully sent schedule decision to OS simulation: PID={next_pid}")
         return True
     except Exception as ex:
-        logger.error(f"[OS_CONNECTION] Error sending schedule decision: {ex}")
+        logger.error(f"Error sending schedule decision to OS: {ex}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
