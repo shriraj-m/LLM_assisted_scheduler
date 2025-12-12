@@ -10,12 +10,6 @@ This project is a difficult extra credit assignment for our Operating Systems cl
 
 The goal of this project is to explore how Large Language Models can be used to make operating system scheduling decisions and if they make an impact in comparison to traditional methods. Traditional schedulers use fixed algorithms like Round Robin or Shortest Job First. Our approach allows the LLM to dynamically which algorithm fits the best based on the current system state.
 
-
-## Table of Contents
-- [Phase 1: MCP Server & Agent Integration](#phase-1-mcp-server-and-llm-agent)
-- [Phase 2: Ollama Integration](#phase-2-os-simulation)
-- [Installation and Usage](#installation-and-usage)
-
 ---
 
 By giving the LLM access to information about ready processes and CPU usage, it can determine which scheduling algorithm would work best for the current situation. For example, if there are many short processes waiting, it might choose Shortest Job First. If fairness is more important, it might choose Round Robin.
