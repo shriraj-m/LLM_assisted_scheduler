@@ -253,7 +253,7 @@ Here are common scheduling algorithms you can use to make decisions:
 
 ## Phase 2: Ollama Integration
 
-*This section is reserved for partner's contribution.*
+*jordan type yo stuff in here*
 
 ---
 
